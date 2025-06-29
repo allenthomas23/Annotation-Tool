@@ -9,7 +9,7 @@ from multiprocessing import Process, Queue
 import tempfile
 
 from metrics_window import metrics_window_process
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 MODEL_PATH = PROJECT_ROOT / "models/yolov8s.pt"
 UNLABELED_DIR = PROJECT_ROOT / "data/images_unlabeled"

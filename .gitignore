@@ -1,1 +1,6 @@
 venv
+data/*
+dataset
+models
+__pycache__
+temp_training_artifacts

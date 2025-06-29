@@ -1216,6 +1216,7 @@ class AnnotationTool:
             return
 
         img_p = self.image_paths[self.index]
+        print(f"Attempting to load image from: {img_p}")
         self._load_overlay_data(img_p)
         
         try:
