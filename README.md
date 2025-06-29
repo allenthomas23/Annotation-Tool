@@ -6,17 +6,17 @@ This project provides an advanced system for object detection tasks, featuring a
 
 ## Core Components
 
-1.  **Active Learning Loop (`active_loop_V2.py`):**
+1.  **Active Learning Loop (`ActiveLoop.py`):**
     * Manages the overall active learning process.
     * Loads unlabeled images in batches.
     * Uses the current YOLO model to perform inference and generate pre-annotations for the annotation tool.
-    * Launches the Annotation Tool V2 for user review and labeling of the pre-annotated batch.
+    * Launches the Annotation Tool for user review and labeling of the pre-annotated batch.
     * Initiates model training in a separate process once new annotations are available.
     * Updates the primary inference model with the newly trained model upon successful completion.
     * Handles the lifecycle of the Metrics Window.
     * Clears previously annotated and saved images/labels from the working directories (`data/images/`, `data/labels/`) at the start of a new session. 
 
-2.  **Annotation Tool V2 (`annotation_tool_V2.py`):**
+2.  **Annotation Tool (`AnnotationTool.py`):**
     * A Tkinter-based GUI for detailed image annotation. 
     * Displays images with pre-loaded bounding boxes (if provided by the active learning loop). 
     * **Interactive Annotation:**
@@ -34,7 +34,7 @@ This project provides an advanced system for object detection tasks, featuring a
 
 * **Active Learning:** Efficiently label data by focusing on images where the model is least certain (implicitly, by correcting its predictions).
 * **Parallel Training:** Model fine-tuning runs in a separate process, allowing annotation of the next batch to proceed without waiting. 
-* **Interactive GUI Annotation (V2):**
+* **Interactive GUI Annotation:**
     * User-friendly interface with mouse and keyboard controls. 
     * Zoom and pan capabilities for detailed annotation. 
     * Pre-loading of inference results to speed up labeling. 
@@ -57,8 +57,8 @@ This project provides an advanced system for object detection tasks, featuring a
 
 ```
 object-detection/
-├── active_loop_V2.py        # Main active-learning script (V2)
-├── annotation_tool_V2.py    # GUI annotation tool (V2)
+├── ActiveLoop.py        # Main active-learning script
+├── AnnotationTool.py    # GUI annotation tool
 ├── metrics_window.py        # Metrics display window script
 ├── data/
 │   ├── images_unlabeled/    # Source directory for unlabeled input images
@@ -71,9 +71,9 @@ object-detection/
 │   │       ├── images/      # Completed tile images
 │   │       └── labels/      # Completed tile labels
 │   └── labels.txt           # Class index-to-name mapping
-├── dataset/                 # Generated train/val splits (used by annotation_tool_V2.py standalone)
+├── dataset/                 # Generated train/val splits (used by AnnotationTool.py standalone)
 ├── models/
-│   └── yolov8s.pt           # Main YOLO model weights (updated by active_loop_V2.py)
+│   └── yolov8s.pt           # Main YOLO model weights (updated by ActiveLoop.py)
 ├── temp_training_artifacts/ # Temporary files for active learning
 │   ├── model_trained_run_X.pt # Models trained during specific runs
 │   └── yolo_training_runs/  # Artifacts from each YOLO training session
@@ -87,7 +87,7 @@ object-detection/
 
 ## Configuration
 
-Open `active_loop_V2.py` and adjust the following constants as needed: 
+Open `ActiveLoop.py` and adjust the following constants as needed: 
 
 * `MODEL_PATH`: Path to the primary YOLO `.pt` model file.
 * `UNLABELED_DIR`: Directory containing images to be labeled.
@@ -100,7 +100,7 @@ Open `active_loop_V2.py` and adjust the following constants as needed:
 * `EPOCHS`: Number of epochs for each fine-tuning cycle in the active learning loop.
 * `TRAIN_RATIO`: Ratio for splitting data into training and validation sets (e.g., 0.8 for 80% train).
 
-For `annotation_tool_V2.py` (when run standalone): 
+For `AnnotationTool.py` (when run standalone): 
 
 * It primarily uses paths relative to its location or pre-defined structure (e.g., `data/images_unlabeled`, `data/labels.txt`).
 * `TRAIN_RATIO`: Used for splitting the dataset after standalone annotation.
@@ -108,20 +108,20 @@ For `annotation_tool_V2.py` (when run standalone):
 
 ## Running the System
 
-**1. Active Learning Loop with Annotation Tool V2 and Metrics Window:**
+**1. Active Learning Loop with Annotation Tool and Metrics Window:**
 
    Ensure your unlabeled images are in `data/images_unlabeled/` and `data/labels.txt` is correctly set up. The `models/yolov8s.pt` should exist (if not, the script attempts to load a default one).
 
    Navigate to the `object-detection` directory and run:
    ```bash
-   python active_loop_V2.py
+   python ActiveLoop.py
    ```
 
    **Workflow:**
    * The script will start, potentially clearing `data/images/` and `data/labels/`. 
    * The **Metrics Window** will appear. 
-   * The **Annotation Tool V2** will launch for the first batch of images with pre-annotations. 
-   * **Annotation Tool V2 Instructions:**
+   * The **Annotation Tool** will launch for the first batch of images with pre-annotations. 
+   * **Annotation Tool Instructions:**
     * **Mouse:**
         * **Left Click & Drag:** Draw a new bounding box. 
         * **Left Click inside box:** Select a box. Repeated clicks on the same spot cycle through overlapping boxes. 
@@ -136,7 +136,7 @@ For `annotation_tool_V2.py` (when run standalone):
     * **Toggles:**
         * The tiling toggle will tile the image and only ouput the tiles images into the dataset
         * The Overlay toggle will load in the respecive csv file and display the analyst's drawings
-   * After a batch is annotated and the Annotation Tool V2 is closed for that batch:
+   * After a batch is annotated and the Annotation Tool is closed for that batch:
         * The main loop saves annotations. 
         * If new annotations were made, a new training process starts in the background using images from `data/images/` and labels from `data/labels/`. 
         * The **Metrics Window** will update with data from `temp_training_artifacts/yolo_training_runs/run_X/results.csv` as the training progresses and completes. 
@@ -144,13 +144,13 @@ For `annotation_tool_V2.py` (when run standalone):
         * Once training is complete, the `models/yolov8s.pt` is updated.  Trained images/labels from `data/images/` and `data/labels/` are then removed to prepare for the next cycle with new data. 
    * The loop continues until all images in `data/images_unlabeled/` are processed or the user aborts. 
 
-**2. Running Annotation Tool V2 Standalone:**
+**2. Running Annotation Tool Standalone:**
 
    Ensure your images are in `data/images_unlabeled/` and `data/labels.txt` is correctly formatted. 
 
    Navigate to the `object-detection` directory and run:
    ```bash
-   python annotation_tool_V2.py
+   python AnnotationTool.py
    ```
    * The tool will load images from `data/images_unlabeled/`. 
    * Use the GUI and keyboard shortcuts as described above. 
@@ -160,9 +160,9 @@ For `annotation_tool_V2.py` (when run standalone):
 
 ## Outputs
 
-* **`data/images/`**: Contains images that have been annotated (either through active learning or standalone tool). Cleared periodically by `active_loop_V2.py` after successful training cycles.
+* **`data/images/`**: Contains images that have been annotated (either through active learning or standalone tool). Cleared periodically by `ActiveLoop.py` after successful training cycles.
 * **`data/labels/`**: Contains YOLO-format `.txt` label files corresponding to images in `data/images/`. Also cleared periodically.
-* **`dataset/`**: When `annotation_tool_V2.py` is run standalone and completes, this directory is populated with `train/` and `val/` subdirectories for images and labels.
+* **`dataset/`**: When `AnnotationTool.py` is run standalone and completes, this directory is populated with `train/` and `val/` subdirectories for images and labels.
 * **`models/yolov8s.pt`**: The main, continually updated YOLO model weights from the active learning loop.
 * **`temp_training_artifacts/`**:
     * `model_trained_run_X.pt`: Snapshot of the model trained in a specific run of the active learning loop.
@@ -174,8 +174,8 @@ For `annotation_tool_V2.py` (when run standalone):
 ## Important Notes
 
 * **`labels.txt`:** This file is crucial. It maps class names to indices (e.g., `0:person`). Ensure it's present and correctly formatted in `data/labels.txt`. If an index is not specified (e.g., just `person`), the tool defaults to using the line number (0-indexed) as the class index. 
-* **Initial Model:** If `models/yolov8s.pt` is not found when running `active_loop_V2.py`, the script will attempt to load a default `yolov8s.pt` from Ultralytics and save it to the `MODEL_PATH`. 
-* **Temporary Datasets for Training:** The `active_loop_V2.py` creates temporary dataset structures and YAML files within `tempfile` directories for each training run, which are then referenced by the YOLO training process.  These temporary datasets are cleaned up after training. 
-* **Metrics Persistence:** The Metrics Window is designed to stay open across multiple annotation and training cycles within a single `active_loop_V2.py` session. 
+* **Initial Model:** If `models/yolov8s.pt` is not found when running `ActiveLoop.py`, the script will attempt to load a default `yolov8s.pt` from Ultralytics and save it to the `MODEL_PATH`. 
+* **Temporary Datasets for Training:** The `ActiveLoop.py` creates temporary dataset structures and YAML files within `tempfile` directories for each training run, which are then referenced by the YOLO training process.  These temporary datasets are cleaned up after training. 
+* **Metrics Persistence:** The Metrics Window is designed to stay open across multiple annotation and training cycles within a single `ActiveLoop.py` session. 
 * **Previous Runs** are saved in `temp_training_artifacts/` and **will be overwritten** if ran again without saving them elsewhere 
-* **Standalone Tool Dataset Splitting:** The `annotation_tool_V2.py`, when run standalone, will attempt to split the annotated data from `data/images/` and `data/labels/` into the `dataset/` directory only if annotations were actually made and saved.
+* **Standalone Tool Dataset Splitting:** The `AnnotationTool.py`, when run standalone, will attempt to split the annotated data from `data/images/` and `data/labels/` into the `dataset/` directory only if annotations were actually made and saved.
