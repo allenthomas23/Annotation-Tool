@@ -1,6 +1,12 @@
 venv
-data/*
+data/completed
+data/labels
+data/overlays
+data/images
 dataset
 models
 __pycache__
 temp_training_artifacts
+data/images_unlabeled/*.jpg
+data/images_unlabeled/*.png
+data/images_unlabeled/*.jpeg
