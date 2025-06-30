@@ -128,7 +128,10 @@ For `AnnotationTool.py` (when run standalone):
         * **Left Click & Drag on edges/corners of a selected box:** Resize the selected bounding box.
         * **Middle Mouse Drag:** Pan the image. 
         * **Mouse Wheel:** Zoom in/out, centered on the mouse cursor. 
-    * **Keyboard Shortcuts:** * `n`: Save annotations for the current image and move to the next in the batch. If it's the last image, finishing the batch may trigger training. 
+    * **Keyboard Shortcuts:**
+        * `n`: Save annotations for the current image and move to the next in the batch. If it's the last image, finishing the batch may trigger training. 
+        * `b`: Save current annotations and go to the previous image
+        * `s`: Save annoataions on the current image
         * `r`: Reset (clear) all boxes on the current image. 
         * `d`: Delete the currently selected bounding box. 
         * `c`: Center the image and fit it to the current view (resets zoom/pan). 
