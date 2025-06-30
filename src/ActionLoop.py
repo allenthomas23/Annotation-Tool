@@ -53,15 +53,15 @@ def ensure_dirs_exist():
 
 
 def run_training_process(
-    current_all_images_dir_str: str,
-    current_all_labels_dir_str: str,
-    base_model_to_train_from_str: str,
+    current_all_images_dir_str: str, # Path to directory with all current annotated images
+    current_all_labels_dir_str: str, # Path to directory with all current annotation label files
+    base_model_to_train_from_str: str, # Path to the .pt model file to use as a base for this training run
     epochs_count: int,
     image_size_for_train: int,
     data_train_ratio: float,
-    labels_txt_file_str: str,
-    training_run_id: str,
-    result_communication_queue: Queue
+    labels_txt_file_str: str, # Path to the master labels.txt file
+    training_run_id: str, # Unique identifier for this training run
+    result_communication_queue: Queue # Queue to send back results
 ):
     """
     This function runs in a separate process to train the YOLO model.
@@ -83,11 +83,12 @@ def run_training_process(
         split_dataset(
             src_images=src_images_path_obj,
             src_labels=Path(current_all_labels_dir_str),
-            output_dir=temp_dataset_root_path,
+            output_dir=temp_dataset_root_path, # Output to the temp directory
             train_ratio=data_train_ratio
         )
-        class_names_map = {}
-        class_indices_list = []
+        #create the dataset.yaml file for YOLO training
+        class_names_map = {} # Stores {index: name}
+        class_indices_list = [] # Stores unique class indices
         with open(labels_txt_file_str, 'r') as f_labels:
             for idx, line in enumerate(f_labels):
                 line = line.strip()
@@ -96,11 +97,11 @@ def run_training_process(
                 class_idx = int(parts[0]) if len(parts) > 1 and parts[0].isdigit() else idx
                 class_name = parts[1].strip() if len(parts) > 1 else parts[0].strip()
 
-                if class_idx not in class_names_map:
+                if class_idx not in class_names_map: # Avoid duplicates if labels.txt has them
                     class_names_map[class_idx] = class_name
                     class_indices_list.append(class_idx)
-
-        num_classes = len(class_indices_list)
+        # Write the temporary dataset.yaml
+        num_classes = len(class_indices_list) # Actual number of unique classes
         temp_yaml_file_path = temp_dataset_root_path / "training_data.yaml"
         with open(temp_yaml_file_path, 'w') as f_yaml:
             f_yaml.write(f"path: {str(temp_dataset_root_path.resolve())}\n")
@@ -109,7 +110,7 @@ def run_training_process(
             f_yaml.write(f"nc: {num_classes}\n")
             f_yaml.write("names:\n")
             for i in sorted(class_names_map.keys()):
-                 f_yaml.write(f"  {i}: '{class_names_map[i]}'\n")
+                 f_yaml.write(f"  {i}: '{class_names_map[i]}'\n") #
 
         print(f"[Trainer-{training_run_id}] Loading base model from: {base_model_to_train_from_str}")
         model = YOLO(base_model_to_train_from_str)
@@ -119,7 +120,7 @@ def run_training_process(
         yolo_runs_project_dir.mkdir(parents=True, exist_ok=True)
 
         current_run_artifact_dir = yolo_runs_project_dir / training_run_id
-        current_run_artifact_dir.mkdir(parents=True, exist_ok=True)
+        current_run_artifact_dir.mkdir(parents=True, exist_ok=True) 
 
         if temp_yaml_file_path.exists():
             try:
@@ -272,6 +273,15 @@ def active_learning_loop():
                                 except Exception as e_move:
                                     print(f"Main Loop: Error moving {original_file.name}: {e_move}")
                                 break
+                        
+                        # Also move the original image's label file
+                        original_label_path = LABELS_DIR / f"{original_stem}.txt"
+                        if original_label_path.exists():
+                            try:
+                                shutil.move(str(original_label_path), COMPLETED_LABELS_DIR / original_label_path.name)
+                            except Exception as e_move_label:
+                                print(f"Main Loop: Error moving original label file {original_label_path.name}: {e_move_label}")
+
                     
                     label_in_labels_dir = LABELS_DIR / f"{img_in_images_dir.stem}.txt"
                     if label_in_labels_dir.exists():

@@ -9,7 +9,8 @@ from PIL import Image, ImageTk
 import threading
 import queue
 import csv
-
+#IMAGES_DIR = PROJECT_ROOT / "data" / "completed" / "images"
+#LABELS_DIR = PROJECT_ROOT / "data" / "completed" / "labels"
 Image.MAX_IMAGE_PIXELS = None
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -216,6 +217,8 @@ class AnnotationTool:
             "Mouse Wheel: Zoom image (centered on cursor)\n\n"
             "Keys:\n"
             "n: Next image (Save current)\n"
+            "b: Back to previous image\n"
+            "s: Save annotations for current image\n"
             "r: Reset boxes on current image\n"
             "d: Delete selected box\n"
             "c: Center and fit image (reset zoom/pan)\n"
@@ -230,22 +233,21 @@ class AnnotationTool:
 
         def on_ok():
             self.enable_tiling = tiling_var.get()
-            self.proceed_with_annotation = True # User confirmed to start
+            self.proceed_with_annotation = True
             dialog.destroy()
 
         ok_button = tk.Button(dialog, text="Start Annotating", command=on_ok, width=20)
         ok_button.pack(pady=10)
-        dialog.bind("<Return>", lambda event: on_ok()) # Allow Enter key to confirm
+        dialog.bind("<Return>", lambda event: on_ok()) 
 
-        def on_dialog_close_button(): # Handle [X] button closure
-            # If closed via [X], treat it as not proceeding unless "Start" was somehow clicked
+        def on_dialog_close_button():
             if not self.proceed_with_annotation:
-                self.run_aborted = True # This signals the run() method to abort
+                self.run_aborted = True
             dialog.destroy()
 
         dialog.protocol("WM_DELETE_WINDOW", on_dialog_close_button)
 
-        # Calculate position to center dialog over the main window (if visible) or screen
+        #calculate position to center dialog over the main window (if visible) or screen
         self.root.update_idletasks()
         dialog.update_idletasks()
 
@@ -259,7 +261,7 @@ class AnnotationTool:
             root_height = self.root.winfo_height()
             position_x = root_x + (root_width // 2) - (dialog_width // 2)
             position_y = root_y + (root_height // 2) - (dialog_height // 2)
-        else: # Fallback to screen center if root window isn't ready
+        else: #fallback to screen center if root window isn't ready
             screen_width = dialog.winfo_screenwidth()
             screen_height = dialog.winfo_screenheight()
             position_x = (screen_width // 2) - (dialog_width // 2)
@@ -267,8 +269,8 @@ class AnnotationTool:
 
         dialog.geometry(f"{dialog_width}x{dialog_height}+{position_x}+{position_y}")
 
-        dialog.focus_set() # Set focus to the dialog
-        self.root.wait_window(dialog) # Wait for the dialog to close
+        dialog.focus_set() #set focus to the dialog
+        self.root.wait_window(dialog) #wait for the dialog to close
 
         return self.proceed_with_annotation
 
@@ -403,8 +405,8 @@ class AnnotationTool:
         if not self.original_pil_img or not hasattr(self, 'root') or not self.root.winfo_exists():
             return
 
-        # Ensure canvas dimensions are current before requesting a redraw based on them
-        # This is important if canvas size changed and <Configure> event hasn't updated self.current_canvas_width/height yet
+        #ensure canvas dimensions are current before requesting a redraw based on them
+        #this is important if canvas size changed and <Configure> event hasn't updated self.current_canvas_width/height yet
         if self.canvas.winfo_exists():
             c_width = self.canvas.winfo_width()
             c_height = self.canvas.winfo_height()
@@ -467,7 +469,7 @@ class AnnotationTool:
             color = "red" if i == self.active_box else "green"
             line_w = 3 if i == self.active_box else 2
 
-            # Convert original coordinates to canvas coordinates so the stay fixed with zoom/pan
+            #convert original coordinates to canvas coordinates so the stay fixed with zoom/pan
             cx1, cy1 = self._original_to_canvas_coords_cropped_view(x1_o, y1_o)
             cx2, cy2 = self._original_to_canvas_coords_cropped_view(x2_o, y2_o)
 
@@ -486,11 +488,11 @@ class AnnotationTool:
                 outline="blue", width=1, dash=(4, 2), tags="drawing_box"
             )
         
-        # Draw the hover label for overlay points
+        #draw the hover label for overlay points
         if self.hover_info['visible']:
             x, y = self.hover_info['x'], self.hover_info['y']
             text = self.hover_info['text']
-            # A rough estimate for text width
+            #a rough estimate for text width
             text_width = len(text) * 7 
             self.canvas.create_rectangle(x, y - 15, x + text_width, y + 5, fill="white", outline="black", tags="hover_label")
             self.canvas.create_text(x + 5, y - 5, text=text, anchor=tk.W, tags="hover_label", fill="black")
@@ -511,8 +513,8 @@ class AnnotationTool:
 
         if orig_view_w <= 0 or orig_view_h <= 0: return 0,0
 
-        #These values give you the coordinates of the (original_x, original_y) point
-        # as if the top-left corner of the crop (crop_x0, crop_y0) was the origin (0,0)
+        #these values give you the coordinates of the (original_x, original_y) point
+        #as if the top-left corner of the crop (crop_x0, crop_y0) was the origin (0,0)
         relative_x_in_crop = original_x - crop_x0
         relative_y_in_crop = original_y - crop_y0
 
@@ -523,14 +525,14 @@ class AnnotationTool:
 
     def _canvas_to_original_coords(self, canvas_x, canvas_y):
         """Converts canvas coordinates to original image coordinates based on the currently displayed cropped view."""
-        # Fallback if displayed_orig_view_rect isn't set
+        #fallback if displayed_orig_view_rect isn't set
         if not self.displayed_orig_view_rect or self.current_canvas_width <= 0 or self.current_canvas_height <= 0:
             if self.zoom_level == 0: return self.view_orig_x0, self.view_orig_y0
             orig_x = self.view_orig_x0 + (canvas_x / self.zoom_level)
             orig_y = self.view_orig_y0 + (canvas_y / self.zoom_level)
             return orig_x, orig_y
 
-        #Essentially the reverse of _original_to_canvas_coords_cropped_view
+        #essentially the reverse of _original_to_canvas_coords_cropped_view
         crop_x0, crop_y0, crop_x1, crop_y1 = self.displayed_orig_view_rect
         orig_view_w = crop_x1 - crop_x0
         orig_view_h = crop_y1 - crop_y0
@@ -576,7 +578,9 @@ class AnnotationTool:
         control_frame = tk.Frame(self.root)
         control_frame.pack(fill=tk.X, pady=5)
 
+        tk.Button(control_frame, text="Back (b)", command=self._back_image_action).pack(side=tk.LEFT, padx=5)
         tk.Button(control_frame, text="Next (n)", command=self._next_image_action).pack(side=tk.LEFT, padx=5)
+        tk.Button(control_frame, text="Save (s)", command=self._save_action).pack(side=tk.LEFT, padx=5)
         tk.Button(control_frame, text="Reset (r)", command=self._reset_action).pack(side=tk.LEFT, padx=5)
         tk.Button(control_frame, text="Delete (d)", command=self._delete_action).pack(side=tk.LEFT, padx=5)
         tk.Button(control_frame, text="Center/Fit (c)", command=self._center_and_fit_image_action).pack(side=tk.LEFT, padx=5)
@@ -587,7 +591,9 @@ class AnnotationTool:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
         #hotkeys
+        self.root.bind('b', lambda event: self._back_image_action())
         self.root.bind('n', lambda event: self._next_image_action())
+        self.root.bind('s', lambda event: self._save_action())
         self.root.bind('r', lambda event: self._reset_action())
         self.root.bind('d', lambda event: self._delete_action())
         self.root.bind('c', lambda event: self._center_and_fit_image_action())
@@ -607,7 +613,7 @@ class AnnotationTool:
     def _load_overlay_data(self, img_path):
         self.overlay_points = []
         csv_path = self.overlay_data_dir / f"{img_path.stem}.csv"
-        print(f"Loading overlay data from {csv_path}")
+        #print(f"Loading overlay data from {csv_path}")
         if csv_path.exists():
             try:
                 with open(csv_path, 'r', newline='') as f:
@@ -616,7 +622,7 @@ class AnnotationTool:
                         try:
                             x = float(row['x'])
                             y = float(row['y'])
-                            # Get name, default to empty string if not present
+                            #get name, default to empty string if not present
                             name = row.get('names', '') 
                             self.overlay_points.append((x, y, name))
                         except (ValueError, IndexError, KeyError) as e:
@@ -624,7 +630,8 @@ class AnnotationTool:
             except Exception as e:
                 print(f"Error loading overlay CSV {csv_path}: {e}")
 
-        print(f"Loaded {len(self.overlay_points)} overlay points from {csv_path}")
+        if len(self.overlay_points) > 0:
+            print(f"Loaded {len(self.overlay_points)} overlay points from {csv_path}")
 
 
     def _on_canvas_hover(self, event):
@@ -646,8 +653,8 @@ class AnnotationTool:
 
             if dist_sq < min_dist_sq:
                 self.hover_info['text'] = name
-                self.hover_info['x'] = event.x + 10 # Offset from cursor
-                self.hover_info['y'] = event.y - 10 # Offset from cursor
+                self.hover_info['x'] = event.x + 10 #offset from cursor
+                self.hover_info['y'] = event.y - 10 #offset from cursor
                 self.hover_info['visible'] = True
                 new_active_index = i
                 found_point = True
@@ -686,7 +693,7 @@ class AnnotationTool:
         self.info_zoom_pan_text = tk.StringVar(value="Zoom: 1.00x, Pan Orig_Coord: (0,0)")
         tk.Label(info_frame, textvariable=self.info_zoom_pan_text, anchor="w").pack(fill="x", pady=2)
 
-        # Separator
+        #separator
         tk.Frame(info_frame, height=2, bd=1, relief=tk.SUNKEN).pack(fill=tk.X, pady=(5, 5))
         self.info_box_index_text = tk.StringVar(value="Selected Box: N/A")
         tk.Label(info_frame, textvariable=self.info_box_index_text, anchor="w").pack(fill="x", pady=2)
@@ -697,7 +704,7 @@ class AnnotationTool:
         self.info_box_size_orig_text = tk.StringVar(value="Orig Size: N/A")
         tk.Label(info_frame, textvariable=self.info_box_size_orig_text, anchor="w").pack(fill="x", pady=2)
 
-        # Separator
+        #separator
         tk.Frame(info_frame, height=2, bd=1, relief=tk.SUNKEN).pack(fill=tk.X, pady=(5, 5))
         self.info_box_coords_disp_text = tk.StringVar(value="Disp Coords (Canvas): N/A")
         tk.Label(info_frame, textvariable=self.info_box_coords_disp_text, anchor="w").pack(fill="x", pady=2)
@@ -779,6 +786,7 @@ class AnnotationTool:
         else:
             print(f"labels.txt not found at {self.labels_txt}")
             self.valid_labels = []
+        self.idx_to_label = {v: k for k, v in self.label_to_idx.items()}
 
     def _on_mouse_press(self, event):
         """Handles mouse press events, initiating drawing or resizing mode."""
@@ -788,22 +796,22 @@ class AnnotationTool:
 
         cx, cy = event.x, event.y
         
-        # Check for resize grab first the corners have priority
+        #check for resize grab first the corners have priority
         for i, (lbl, x1_o, y1_o, x2_o, y2_o) in enumerate(self.boxes):
             cx1, cy1 = self._original_to_canvas_coords_cropped_view(x1_o, y1_o)
             cx2, cy2 = self._original_to_canvas_coords_cropped_view(x2_o, y2_o)
 
-            # Ensure coordinates are ordered for calculations
+            #ensure coordinates are ordered for calculations
             norm_cx1, norm_cx2 = min(cx1, cx2), max(cx1, cx2)
             norm_cy1, norm_cy2 = min(cy1, cy2), max(cy1, cy2)
 
-            # Check corners
+            #check corners
             on_tl = (abs(cx - norm_cx1) < self.resize_tolerance and abs(cy - norm_cy1) < self.resize_tolerance)
             on_tr = (abs(cx - norm_cx2) < self.resize_tolerance and abs(cy - norm_cy1) < self.resize_tolerance)
             on_bl = (abs(cx - norm_cx1) < self.resize_tolerance and abs(cy - norm_cy2) < self.resize_tolerance)
             on_br = (abs(cx - norm_cx2) < self.resize_tolerance and abs(cy - norm_cy2) < self.resize_tolerance)
             
-            # Check edges
+            #check edges
             on_left = abs(cx - norm_cx1) < self.resize_tolerance and norm_cy1 <= cy <= norm_cy2
             on_right = abs(cx - norm_cx2) < self.resize_tolerance and norm_cy1 <= cy <= norm_cy2
             on_top = abs(cy - norm_cy1) < self.resize_tolerance and norm_cx1 <= cx <= norm_cx2
@@ -827,7 +835,7 @@ class AnnotationTool:
             self.canvas.config(cursor=cursor)
             return
 
-        # If not resizing, proceed with drawing
+        #if not resizing, proceed with drawing
         self.drawing = True
         self.start_pt_canvas = (cx, cy)
         self.current_pt_canvas = (cx, cy)
@@ -954,12 +962,12 @@ class AnnotationTool:
         dx_canvas = event.x - self.last_pan_mouse_x
         dy_canvas = event.y - self.last_pan_mouse_y
 
-        # Pan amount in original image pixels (scaled by current zoom level)
+        #pan amount in original image pixels (scaled by current zoom level)
         if self.zoom_level > 0:
             self.view_orig_x0 -= dx_canvas / self.zoom_level
             self.view_orig_y0 -= dy_canvas / self.zoom_level
 
-        # Clamp pan
+        #clamp pan
         if self.zoom_level > 0 and self.current_original_width > 0 and self.current_original_height > 0:
             orig_visible_w = self.current_canvas_width / self.zoom_level
             orig_visible_h = self.current_canvas_height / self.zoom_level
@@ -1075,7 +1083,7 @@ class AnnotationTool:
         self.view_orig_x0 = orig_mouse_x_before - (canvas_mx / self.zoom_level)
         self.view_orig_y0 = orig_mouse_y_before - (canvas_my / self.zoom_level)
 
-        #Clamp pan after zoom
+        #clamp pan after zoom
         if self.zoom_level > 0 :
             orig_visible_w = self.current_canvas_width / self.zoom_level
             orig_visible_h = self.current_canvas_height / self.zoom_level
@@ -1187,26 +1195,50 @@ class AnnotationTool:
         self.zoom_level = max(min_zoom, min(self.zoom_level, max_zoom))
         if self.zoom_level == 0 : self.zoom_level = min_zoom
 
-        #Calculate view_orig_x0, y0 to center the content
-        #Content width/height in original pixels at this new zoom_level
+        #calculate view_orig_x0, y0 to center the content
+        #content width/height in original pixels at this new zoom_level
         content_width_orig_at_new_zoom = canvas_w / self.zoom_level if self.zoom_level > 0 else self.current_original_width
         content_height_orig_at_new_zoom = canvas_h / self.zoom_level if self.zoom_level > 0 else self.current_original_height
 
         self.view_orig_x0 = (self.current_original_width - content_width_orig_at_new_zoom) / 2.0
         self.view_orig_y0 = (self.current_original_height - content_height_orig_at_new_zoom) / 2.0
 
-        #Clamp view origin if image is smaller than viewport at this zoom so it's centered or at 0,0
+        #clamp view origin if image is smaller than viewport at this zoom so it's centered or at 0,0
         if self.current_original_width <= content_width_orig_at_new_zoom:
              self.view_orig_x0 = (self.current_original_width - content_width_orig_at_new_zoom) / 2.0
-        else: #Image is wider than viewport, ensure we don't pan beyond edges
+        else: #image is wider than viewport, ensure we don't pan beyond edges
             self.view_orig_x0 = max(0, min(self.view_orig_x0, self.current_original_width - content_width_orig_at_new_zoom))
 
         if self.current_original_height <= content_height_orig_at_new_zoom:
             self.view_orig_y0 = (self.current_original_height - content_height_orig_at_new_zoom) / 2.0
-        else: #Image is taller than viewport
+        else: #image is taller than viewport
             self.view_orig_y0 = max(0, min(self.view_orig_y0, self.current_original_height - content_height_orig_at_new_zoom))
 
         self._request_redraw()
+
+    def _load_annotations_from_file(self, label_path):
+        """Loads annotations from a YOLO format .txt file."""
+        if not label_path.exists():
+            return
+        self.boxes = []
+        with open(label_path, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                class_idx = int(parts[0])
+                cx = float(parts[1])
+                cy = float(parts[2])
+                bw = float(parts[3])
+                bh = float(parts[4])
+
+                lbl_name = self.idx_to_label.get(class_idx)
+                if lbl_name:
+                    w = bw * self.current_original_width
+                    h = bh * self.current_original_height
+                    x1 = (cx * self.current_original_width) - (w / 2)
+                    y1 = (cy * self.current_original_height) - (h / 2)
+                    x2 = x1 + w
+                    y2 = y1 + h
+                    self.boxes.append((lbl_name, x1, y1, x2, y2))
 
 
     def _load_current_image(self):
@@ -1216,7 +1248,6 @@ class AnnotationTool:
             return
 
         img_p = self.image_paths[self.index]
-        print(f"Attempting to load image from: {img_p}")
         self._load_overlay_data(img_p)
         
         try:
@@ -1246,7 +1277,7 @@ class AnnotationTool:
             target_canvas_w = self.current_original_width
             target_canvas_h = self.current_original_height
         else:
-            # Fit the image to the canvas while maintaining aspect ratio
+            #fit the image to the canvas while maintaining aspect ratio
             vp_ratio = target_canvas_w / target_canvas_h if target_canvas_h !=0 else 1
             if img_ratio > vp_ratio:
                 target_canvas_w = MAX_CANVAS_VIEWPORT_WIDTH
@@ -1267,7 +1298,7 @@ class AnnotationTool:
         self.root.update_idletasks()
 
 
-        #These self.current_canvas_width/height will be passed to worker thread.
+        #these self.current_canvas_width/height will be passed to worker thread.
         actual_w = self.canvas.winfo_width()
         actual_h = self.canvas.winfo_height()
         if actual_w > 1 : self.current_canvas_width = actual_w
@@ -1275,7 +1306,10 @@ class AnnotationTool:
 
         #add the boxes from inference if available
         self.boxes = []; self.active_box = None
-        if img_p.resolve() in self.preload:
+        label_path = self.labels_dir / f"{img_p.stem}.txt"
+        if label_path.exists():
+            self._load_annotations_from_file(label_path)
+        elif img_p.resolve() in self.preload:
             for cls_idx_preload, x1_o, y1_o, x2_o, y2_o in self.preload[img_p.resolve()]:
                 lbl_name = ""
                 for name, original_idx in self.label_to_idx.items():
@@ -1288,11 +1322,23 @@ class AnnotationTool:
         #needed curerrently for hotkeys to work
         self.canvas.focus_force()
 
+    def _back_image_action(self):
+        """Goes to the previous image."""
+        self._save_action()
+        if self.index > 0:
+            self.index -= 1
+            self._load_current_image()
+
+    def _save_action(self):
+        """Saves the annotations for the current image."""
+        if self.index < len(self.image_paths) and self.original_pil_img and self.current_original_width > 0:
+            current_img_path = self.image_paths[self.index]
+            self._save_annotations(current_img_path, self.current_original_width, self.current_original_height)
 
     def _next_image_action(self):
-        # Ensure we are operating on a loaded image
+        #ensure we are operating on a loaded image
         if not (self.index < len(self.image_paths) and self.original_pil_img and self.current_original_width > 0):
-            self.index += 1 # Increment to avoid getting stuck if image was bad
+            self.index += 1 #increment to avoid getting stuck if image was bad
             if self.index < len(self.image_paths):
                 self._load_current_image()
             else:
@@ -1300,6 +1346,9 @@ class AnnotationTool:
             return
 
         current_img_path = self.image_paths[self.index]
+
+        #save the current annotations before moving to the next image
+        self._save_annotations(current_img_path, self.current_original_width, self.current_original_height)
 
         if self.enable_tiling and self.boxes:
             processed_tiles_with_boxes = self._process_and_save_tiles(
@@ -1313,7 +1362,7 @@ class AnnotationTool:
 
             if processed_tiles_with_boxes:
 
-                # Ensure any existing label file for the original image is removed.
+                #ensure any existing label file for the original image is removed.
                 original_label_file = self.labels_dir / f"{current_img_path.stem}.txt"
                 if original_label_file.exists():
                     try:
@@ -1321,7 +1370,7 @@ class AnnotationTool:
                     except OSError as e:
                         print(f"Error removing original label file {original_label_file} after successful tiling: {e}")
             else:
-                # Tiling enabled. annotations present. but no valid tiles with boxes were made.
+                #tiling enabled. annotations present. but no valid tiles with boxes were made.
                 error_message = (
                     f"Image {current_img_path.name} had annotations and tiling was enabled, but no valid "
                     f"tiles with fully contained bounding boxes were generated. This image and its "
@@ -1331,7 +1380,7 @@ class AnnotationTool:
                 if hasattr(self, 'root') and self.root.winfo_exists():
                     messagebox.showerror("Tiling Output Issue", error_message, parent=self.root)
 
-                #Ensure original label file is removed
+                #ensure original label file is removed
                 original_label_file = self.labels_dir / f"{current_img_path.stem}.txt"
                 if original_label_file.exists():
                     try:
@@ -1348,8 +1397,14 @@ class AnnotationTool:
                     self.original_pil_img.save(str(self.images_out_dir / current_img_path.name))
                 except Exception as e:
                     print(f"Error saving original image {current_img_path.name}: {e}")
+            else:
+                #if there are no boxes, remove the image if it exists
+                image_to_remove = self.images_out_dir / current_img_path.name
+                if image_to_remove.exists():
+                    image_to_remove.unlink()
 
-        # Move to the next image
+
+        #move to the next image
         self.index += 1
         if self.index < len(self.image_paths):
             self._load_current_image()
@@ -1381,7 +1436,7 @@ class AnnotationTool:
         """Handles the quit action, cleaning up resources and stopping threads."""
         if hasattr(self, '_quitting_initiated') and self._quitting_initiated:
             return
-        self._quitting_initiated = True # Set the flag
+        self._quitting_initiated = True #set the flag
 
         self.worker_thread_stop_event.set()
         try:
@@ -1390,7 +1445,7 @@ class AnnotationTool:
         except queue.Full:
             pass
 
-        # Destroy info_window if it exists and is valid
+        #destroy info_window if it exists and is valid
         if hasattr(self, 'info_window') and self.info_window:
             try:
                 if self.info_window.winfo_exists():
@@ -1402,18 +1457,18 @@ class AnnotationTool:
         self.original_pil_img = None
         self.photo_image = None
 
-        # Join worker thread
+        #join worker thread
         if self.image_processing_thread and self.image_processing_thread.is_alive():
-            self.image_processing_thread.join(timeout=0.5) # Wait for thread to finish
+            self.image_processing_thread.join(timeout=0.5) #wait for thread to finish
             if self.image_processing_thread.is_alive():
                 print("Warning: Image processing thread did not join quickly.")
-        self.image_processing_thread = None # Clear the reference
+        self.image_processing_thread = None #clear the reference
 
-        # Destroy root window if it exists and is valid
-        if hasattr(self, 'root') and self.root: # Check if attribute exists and is not None
+        #destroy root window if it exists and is valid
+        if hasattr(self, 'root') and self.root: #check if attribute exists and is not None
             try:
-                if self.root.winfo_exists(): # Check if Tk widget actually exists
-                    # Cancel any pending 
+                if self.root.winfo_exists(): #check if Tk widget actually exists
+                    #cancel any pending 
                     if hasattr(self, 'zoom_finalize_timer_id') and self.zoom_finalize_timer_id:
                         self.root.after_cancel(self.zoom_finalize_timer_id)
                     self.zoom_finalize_timer_id = None
@@ -1450,7 +1505,7 @@ class AnnotationTool:
             return False
 
         if not self._show_initial_instructions_and_settings():
-            self._quit_action() # Ensure full cleanup if dialog is dismissed
+            self._quit_action() #ensure full cleanup if dialog is dismissed
             return False
 
         self.root.after(10, self._load_current_image)
@@ -1511,15 +1566,16 @@ class AnnotationTool:
 
                 if actual_crop_w <= 0 or actual_crop_h <= 0: continue
 
-                # Calculate padding for this specific tile before proceeding further
+                #calculate padding for this specific tile before proceeding further
                 total_tile_area = float(tile_w * tile_h)
                 actual_content_area = float(actual_crop_w * actual_crop_h)
 
-                if total_tile_area == 0: continue # Should be caught by earlier tile_w/h check
+                if total_tile_area == 0: continue #should be caught by earlier tile_w/h check
 
                 current_padding_ratio = 1.0 - (actual_content_area / total_tile_area)
 
                 if current_padding_ratio > max_padding_ratio_allowed:
+                    # print(f"DEBUG: Tile at ({x_start},{y_start}) for {original_img_path.name} skipped due to excess padding: {current_padding_ratio:.2f} > {max_padding_ratio_allowed:.2f}")
                     continue
 
                 actual_cropped_tile_pil = original_pil_img.crop((current_tile_orig_x1, current_tile_orig_y1,
